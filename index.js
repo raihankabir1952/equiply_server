@@ -18,7 +18,7 @@ app.use(
 );
 
 // Better Auth Handler
-app.all("/api/auth/{*any}", toNodeHandler(auth));
+app.all("/api/auth/*splat", toNodeHandler(auth));
 
 // Body Parser
 app.use(express.json());
