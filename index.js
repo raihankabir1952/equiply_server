@@ -7,6 +7,8 @@ import { auth } from "./lib/auth.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import connectDB from "./config/db.js";
+import equipmentRoutes from "./routes/equipment.routes.js";
+import favoriteRoutes from "./routes/favorite.routes.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -20,14 +22,16 @@ app.use(
 );
 
 // Better Auth
-app.all("/api/auth/*splat", toNodeHandler(auth));
+app.all("/auth/*splat", toNodeHandler(auth));
 
 // Body Parser
 app.use(express.json());
 
 // Routes
-app.use("/api/users", userRoutes);
-app.use("/api/upload", uploadRoutes);
+app.use("/users", userRoutes);
+app.use("/upload", uploadRoutes);
+app.use("/equipment", equipmentRoutes);
+app.use("/favorites", favoriteRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
