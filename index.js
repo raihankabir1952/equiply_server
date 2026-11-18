@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 
 import express from "express";
@@ -6,11 +5,12 @@ import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// CORS Middleware
+// CORS
 app.use(
   cors({
     origin: process.env.CLIENT_URL,
@@ -18,11 +18,14 @@ app.use(
   })
 );
 
-// Better Auth Handler
+// Better Auth
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
 // Body Parser
 app.use(express.json());
+
+// Routes
+app.use("/api/users", userRoutes);
 app.use("/api/upload", uploadRoutes);
 
 // Test Route
