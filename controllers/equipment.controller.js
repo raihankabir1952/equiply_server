@@ -2,7 +2,7 @@
 import { database } from "../config/db.js";
 import { ObjectId } from "mongodb";
 
-const equipments = database.collection("equipments");
+const equipments = database.collection("equipment");
 
 export const createEquipment = async (req, res) => {
     try {
@@ -183,6 +183,27 @@ export const deleteEquipment = async (req, res) => {
 
         return res.status(500).json({
             message: "Failed to delete equipment!",
+        });
+    }
+};
+// Get all equipment (Admin)
+export const getAllEquipment = async (req, res) => {
+    try {
+        const result = await equipments.find({})
+            .sort({
+                createdAt: -1,
+            })
+            .toArray();
+
+        return res.status(200).json({
+            message: "All equipment fetched successfully!",
+            equipments: result,
+        });
+    } catch (error) {
+        console.error("Get all equipment error:", error);
+
+        return res.status(500).json({
+            message: "Failed to fetch equipment!",
         });
     }
 };
