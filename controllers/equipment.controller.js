@@ -338,3 +338,37 @@ export const getPublicEquipment = async (req, res) => {
         });
     }
 };
+// Get equipment details (Public)
+export const getEquipmentDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: "Invalid equipment ID!",
+            });
+        }
+
+        const equipment = await equipments.findOne({
+            _id: new ObjectId(id),
+            status: "approved",
+        });
+
+        if (!equipment) {
+            return res.status(404).json({
+                message: "Equipment not found!",
+            });
+        }
+
+        return res.status(200).json({
+            message: "Equipment details fetched successfully!",
+            equipment,
+        });
+    } catch (error) {
+        console.error("Get equipment details error:", error);
+
+        return res.status(500).json({
+            message: "Failed to fetch equipment details!",
+        });
+    }
+};
