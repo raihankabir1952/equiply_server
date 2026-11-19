@@ -286,3 +286,37 @@ export const adminDeleteEquipment = async (req, res) => {
         });
     }
 };
+// Get all approved equipment (Public)
+export const getPublicEquipment = async (req, res) => {
+    try {
+        const { search } = req.query;
+
+        const query = {
+            status: "approved",
+        };
+
+        if (search) {
+            query.name = {
+                $regex: search,
+                $options: "i",
+            };
+        }
+
+        const result = await equipments.find(query)
+            .sort({
+                createdAt: -1,
+            })
+            .toArray();
+
+        return res.status(200).json({
+            message: "Equipment fetched successfully!",
+            equipments: result,
+        });
+    } catch (error) {
+        console.error("Get public equipment error:", error);
+
+        return res.status(500).json({
+            message: "Failed to fetch equipment!",
+        });
+    }
+};
