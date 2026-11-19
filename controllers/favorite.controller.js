@@ -3,7 +3,7 @@ import { ObjectId } from "mongodb";
 import { database } from "../config/db.js";
 
 const favorites = database.collection("favorites");
-const equipments = database.collection("equipments");
+const equipments = database.collection("equipment");
 
 export const addFavorite = async (req, res) => {
     try {
@@ -66,7 +66,7 @@ export const getMyFavorites = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "equipments",
+                    from: "equipment",
                     localField: "equipmentId",
                     foreignField: "_id",
                     as: "equipment",
