@@ -3,7 +3,7 @@ import { database } from "../config/db.js";
 import { ObjectId } from "mongodb";
 
 const rentals = database.collection("rentals");
-const equipments = database.collection("equipments")
+const equipments = database.collection("equipment")
 
 export const getMyRentals = async (req, res) => {
     try {
@@ -243,6 +243,43 @@ export const updateRentalStatus = async (req, res) => {
 
         return res.status(500).json({
             message: "Failed to update rental status!",
+        });
+    }
+};
+// Get all rentals (Admin)
+export const getAllRentals = async (req, res) => {
+    try {
+        const result = await rentals.aggregate([
+            {
+                $lookup: {
+                    from: "equipment",
+                    localField: "equipmentId",
+                    foreignField: "_id",
+                    as: "equipment",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$equipment",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $sort: {
+                    createdAt: -1,
+                },
+            },
+        ]).toArray();
+
+        return res.status(200).json({
+            message: "All rentals fetched successfully!",
+            rentals: result,
+        });
+    } catch (error) {
+        console.error("Get all rentals error:", error);
+
+        return res.status(500).json({
+            message: "Failed to fetch rentals!",
         });
     }
 };
