@@ -9,6 +9,7 @@ import userRoutes from "./routes/user.routes.js";
 import { connectToMongoDB } from "./config/db.js";
 import equipmentRoutes from "./routes/equipment.routes.js";
 import favoriteRoutes from "./routes/favorite.routes.js";
+import rentalRoutes from "./routes/rental.routes.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -32,6 +33,7 @@ app.use("/users", userRoutes);
 app.use("/upload", uploadRoutes);
 app.use("/equipment", equipmentRoutes);
 app.use("/favorites", favoriteRoutes);
+app.use('/rentals', rentalRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
