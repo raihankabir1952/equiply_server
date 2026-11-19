@@ -254,3 +254,35 @@ export const updateEquipmentStatus = async (req, res) => {
         });
     }
 };
+// Delete equipment (Admin)
+export const adminDeleteEquipment = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: "Invalid equipment ID!",
+            });
+        }
+
+        const result = await equipments.deleteOne({
+            _id: new ObjectId(id),
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                message: "Equipment not found!",
+            });
+        }
+
+        return res.status(200).json({
+            message: "Equipment deleted successfully!",
+        });
+    } catch (error) {
+        console.error("Admin delete equipment error:", error);
+
+        return res.status(500).json({
+            message: "Failed to delete equipment!",
+        });
+    }
+};
