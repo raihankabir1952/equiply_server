@@ -128,6 +128,7 @@ export const handleStripeWebhook = async (req, res) => {
                                 paymentStatus: "paid",
                                 status: "confirmed",
                                 paymentIntentId: checkoutSession.payment_intent,
+                                paidAt: new Date(event.created * 1000),
                                 updatedAt: new Date(),
                             },
                         }
