@@ -1,9 +1,158 @@
-
-import { database } from "../config/db.js";
+import { database, client } from "../config/db.js";
 import { ObjectId } from "mongodb";
 
 const rentals = database.collection("rentals");
 const equipments = database.collection("equipment")
+
+// Create rental (Customer)
+export const createRental = async (req, res) => {
+    const session = client.startSession();
+
+    try {
+        const {
+            equipmentId,
+            startDate,
+            endDate,
+            quantity,
+            contactNumber,
+            address,
+            notes,
+        } = req.body;
+
+        if (!ObjectId.isValid(equipmentId)) {
+            return res.status(400).json({
+                message: "Invalid equipment ID!",
+            });
+        }
+
+        const rentalStartDate = new Date(startDate);
+        const rentalEndDate = new Date(endDate);
+        const rentalQuantity = Number(quantity);
+
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        if (
+            isNaN(rentalStartDate.getTime()) ||
+            isNaN(rentalEndDate.getTime()) ||
+            rentalStartDate < today ||
+            rentalEndDate <= rentalStartDate
+        ) {
+            return res.status(400).json({
+                message: "Invalid rental dates!",
+            });
+        }
+
+        if (!Number.isInteger(rentalQuantity) || rentalQuantity < 1) {
+            return res.status(400).json({
+                message: "Invalid rental quantity!",
+            });
+        }
+
+        if (!contactNumber || !address) {
+            return res.status(400).json({
+                message: "Contact number and address are required!",
+            });
+        }
+
+        let newRental;
+
+        await session.withTransaction(async () => {
+            const equipmentObjectId = new ObjectId(equipmentId);
+
+            const lock = await equipments.updateOne(
+                {
+                    _id: equipmentObjectId,
+                    status: "approved",
+                    isAvailable: { $ne: false },
+                    ownerId: { $ne: req.user.id },
+                },
+                {
+                    $inc: { bookingVersion: 1 },
+                },
+                { session }
+            );
+
+            if (lock.matchedCount === 0) {
+                throw new Error("EQUIPMENT_NOT_AVAILABLE");
+            }
+
+            const equipment = await equipments.findOne(
+                { _id: equipmentObjectId },
+                { session }
+            );
+
+            const overlappingRentals = await rentals.find({
+                equipmentId: equipmentObjectId,
+                status: { $in: ["pending", "confirmed", "active"] },
+                startDate: { $lt: rentalEndDate },
+                endDate: { $gt: rentalStartDate },
+            }, { session }).toArray();
+
+            const bookedQuantity = overlappingRentals.reduce(
+                (total, rental) => total + rental.quantity,
+                0
+            );
+
+            if (bookedQuantity + rentalQuantity > equipment.availableQuantity) {
+                throw new Error("INSUFFICIENT_QUANTITY");
+            }
+
+            const rentalDays = Math.ceil(
+                (rentalEndDate - rentalStartDate) / (1000 * 60 * 60 * 24)
+            );
+
+            const totalAmount =
+                equipment.price * rentalDays * rentalQuantity;
+
+            newRental = {
+                equipmentId: equipmentObjectId,
+                customerId: req.user.id,
+                startDate: rentalStartDate,
+                endDate: rentalEndDate,
+                quantity: rentalQuantity,
+                contactNumber,
+                address,
+                notes: notes || "",
+                rentalDays,
+                totalAmount,
+                status: "pending",
+                paymentStatus: "unpaid",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+
+            const result = await rentals.insertOne(newRental, { session });
+
+            newRental._id = result.insertedId;
+        });
+
+        return res.status(201).json({
+            message: "Rental created successfully!",
+            rental: newRental,
+        });
+    } catch (error) {
+        if (error.message === "EQUIPMENT_NOT_AVAILABLE") {
+            return res.status(404).json({
+                message: "Equipment is not available for rental!",
+            });
+        }
+
+        if (error.message === "INSUFFICIENT_QUANTITY") {
+            return res.status(400).json({
+                message: "Not enough equipment available for these dates!",
+            });
+        }
+
+        console.error("Create rental error:", error);
+
+        return res.status(500).json({
+            message: "Failed to create rental!",
+        });
+    } finally {
+        await session.endSession();
+    }
+};
 
 export const getMyRentals = async (req, res) => {
     try {
@@ -15,7 +164,7 @@ export const getMyRentals = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "equipments",
+                    from: "equipment",
                     localField: "equipmentId",
                     foreignField: "_id",
                     as: "equipment",
@@ -67,7 +216,7 @@ export const getRentalDetails = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "equipments",
+                    from: "equipment",
                     localField: "equipmentId",
                     foreignField: "_id",
                     as: "equipment",
@@ -105,7 +254,7 @@ export const getOwnerRentals = async (req, res) => {
         const result = await rentals.aggregate([
             {
                 $lookup: {
-                    from: "equipments",
+                    from: "equipment",
                     localField: "equipmentId",
                     foreignField: "_id",
                     as: "equipment",
