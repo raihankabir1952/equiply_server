@@ -289,7 +289,7 @@ export const adminDeleteEquipment = async (req, res) => {
 // Get all approved equipment (Public)
 export const getPublicEquipment = async (req, res) => {
     try {
-        const { search } = req.query;
+        const { search, category } = req.query;
 
         const query = {
             status: "approved",
@@ -300,6 +300,9 @@ export const getPublicEquipment = async (req, res) => {
                 $regex: search,
                 $options: "i",
             };
+        }
+        if (category) {
+            query.category = category;
         }
 
         const result = await equipments.find(query)
