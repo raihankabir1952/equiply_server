@@ -10,6 +10,8 @@ import { connectToMongoDB } from "./config/db.js";
 import equipmentRoutes from "./routes/equipment.routes.js";
 import favoriteRoutes from "./routes/favorite.routes.js";
 import rentalRoutes from "./routes/rental.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
+import { handleStripeWebhook } from "./controllers/payment.controller.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -25,6 +27,14 @@ app.use(
 // Better Auth
 app.all("/auth/*splat", toNodeHandler(auth));
 
+app.post(
+  "/payments/webhook",
+  express.raw({
+    type: "application/json"
+  }),
+  handleStripeWebhook
+);
+
 // Body Parser
 app.use(express.json());
 
@@ -34,6 +44,7 @@ app.use("/upload", uploadRoutes);
 app.use("/equipment", equipmentRoutes);
 app.use("/favorites", favoriteRoutes);
 app.use('/rentals', rentalRoutes);
+app.use("/payments", paymentRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
