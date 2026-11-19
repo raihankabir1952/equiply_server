@@ -289,7 +289,7 @@ export const adminDeleteEquipment = async (req, res) => {
 // Get all approved equipment (Public)
 export const getPublicEquipment = async (req, res) => {
     try {
-        const { search, category, miniPrice, maxPrice } = req.query;
+        const { search, category, miniPrice, maxPrice, sort } = req.query;
 
         const query = {
             status: "approved",
@@ -304,20 +304,26 @@ export const getPublicEquipment = async (req, res) => {
         if (category) {
             query.category = category;
         }
-        if(miniPrice !== undefined || maxPrice !== undefined){
+        if (miniPrice !== undefined || maxPrice !== undefined) {
             query.price = {}
-            if(miniPrice !== undefined){
+            if (miniPrice !== undefined) {
                 query.price.$gte = Number(miniPrice);
             }
-            if(maxPrice !== undefined){
+            if (maxPrice !== undefined) {
                 query.price.$lte = Number(maxPrice)
             }
         }
 
+        let sortOption = { createdAt: -1 };
+
+        if (sort === "price_asc") {
+            sortOption = { price: 1 };
+        } else if (sort === "price_desc") {
+            sortOption = { price: -1 };
+        }
+
         const result = await equipments.find(query)
-            .sort({
-                createdAt: -1,
-            })
+            .sort(sortOption)
             .toArray();
 
         return res.status(200).json({
