@@ -1,32 +1,45 @@
-import Favorite from "../models/Favorite.js";
-import Equipment from "../models/Equipment.js";
+
+import { ObjectId } from "mongodb";
+import { database } from "../config/db.js";
+
+const favorites = database.collection("favorites");
+const equipments = database.collection("equipments");
 
 export const addFavorite = async (req, res) => {
     try {
         const { equipmentId } = req.body;
 
-        if (!equipmentId) {
+        if (!ObjectId.isValid(equipmentId)) {
             return res.status(400).json({
-                message: "Equipment ID is required!",
+                message: "Valid equipment ID is required!",
             });
         }
 
-        const equipment = await Equipment.findById(equipmentId);
+        const equipment = await equipments.findOne({
+            _id: new ObjectId(equipmentId),
+            status: "approved",
+        });
 
-        if (!equipment || equipment.status !== "approved") {
+        if (!equipment) {
             return res.status(404).json({
                 message: "Equipment not found!",
             });
         }
 
-        const favorite = await Favorite.create({
+        const favorite = {
             userId: req.user.id,
-            equipmentId,
-        });
+            equipmentId: new ObjectId(equipmentId),
+            createdAt: new Date(),
+        };
+
+        const result = await favorites.insertOne(favorite);
 
         return res.status(201).json({
             message: "Added to favorites successfully!",
-            favorite,
+            favorite: {
+                ...favorite,
+                _id: result.insertedId,
+            },
         });
     } catch (error) {
         if (error.code === 11000) {
@@ -42,17 +55,36 @@ export const addFavorite = async (req, res) => {
         });
     }
 };
+
 export const getMyFavorites = async (req, res) => {
     try {
-        const favorites = await Favorite.find({
-            userId: req.user.id,
-        })
-            .populate("equipmentId")
-            .sort({ createdAt: -1 });
+        const result = await favorites.aggregate([
+            {
+                $match: {
+                    userId: req.user.id,
+                },
+            },
+            {
+                $lookup: {
+                    from: "equipments",
+                    localField: "equipmentId",
+                    foreignField: "_id",
+                    as: "equipment",
+                },
+            },
+            {
+                $unwind: "$equipment",
+            },
+            {
+                $sort: {
+                    createdAt: -1,
+                },
+            },
+        ]).toArray();
 
         return res.status(200).json({
             message: "Favorites fetched successfully!",
-            favorites,
+            favorites: result,
         });
     } catch (error) {
         console.error("Get favorites error:", error);
@@ -62,16 +94,23 @@ export const getMyFavorites = async (req, res) => {
         });
     }
 };
+
 export const removeFavorite = async (req, res) => {
     try {
         const { equipmentId } = req.params;
 
-        const favorite = await Favorite.findOneAndDelete({
+        if (!ObjectId.isValid(equipmentId)) {
+            return res.status(400).json({
+                message: "Valid equipment ID is required!",
+            });
+        }
+
+        const result = await favorites.deleteOne({
             userId: req.user.id,
-            equipmentId,
+            equipmentId: new ObjectId(equipmentId),
         });
 
-        if (!favorite) {
+        if (result.deletedCount === 0) {
             return res.status(404).json({
                 message: "Favorite not found!",
             });

@@ -6,7 +6,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import userRoutes from "./routes/user.routes.js";
-import connectDB from "./config/db.js";
+import { connectToMongoDB } from "./config/db.js";
 import equipmentRoutes from "./routes/equipment.routes.js";
 import favoriteRoutes from "./routes/favorite.routes.js";
 
@@ -38,7 +38,7 @@ app.get("/", (req, res) => {
   res.send("Equiply Server is running!");
 });
 
-await connectDB();
+await connectToMongoDB();
 // Server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

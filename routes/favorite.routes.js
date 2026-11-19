@@ -1,5 +1,6 @@
 import express from "express";
 import verifyToken from "../middleware/verifyToken.js";
+import verifyCustomer from "../middleware/verifyCustomer.js";
 
 import {
     addFavorite,
@@ -9,8 +10,8 @@ import {
 
 const router = express.Router();
 
-router.post("/", verifyToken, addFavorite);
-router.get("/", verifyToken, getMyFavorites);
-router.delete("/:equipmentId", verifyToken, removeFavorite);
+router.post("/", verifyToken, verifyCustomer,addFavorite);
+router.get("/", verifyToken, verifyCustomer, getMyFavorites);
+router.delete("/:equipmentId", verifyToken, verifyCustomer, removeFavorite);
 
 export default router;

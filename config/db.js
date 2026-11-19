@@ -1,19 +1,26 @@
+import { MongoClient } from "mongodb";
 
-import mongoose from "mongoose";
+const client = new MongoClient(process.env.MONGODB_URI);
 
-const connectDB = async () => {
+const database = client.db("equiply");
+
+export const connectToMongoDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI, {
-            dbName: "equiply",
-        });
+        await client.connect();
+
+        await database.collection("favorites").createIndex(
+            { userId: 1, equipmentId: 1 },
+            { unique: true }
+        );
 
         console.log("MongoDB connected successfully!");
-        console.log("Database Name:", mongoose.connection.name);
-        console.log("Database Host:", mongoose.connection.host);
+        console.log("Database Name:", database.databaseName);
+
+        return database;
     } catch (error) {
         console.error("MongoDB connection failed:", error.message);
-        process.exit(1);
+        throw error;
     }
 };
 
-export default connectDB;
+export { client, database };
