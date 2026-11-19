@@ -287,9 +287,10 @@ export const adminDeleteEquipment = async (req, res) => {
     }
 };
 // Get all approved equipment (Public)
+
 export const getPublicEquipment = async (req, res) => {
     try {
-        const { search, category, miniPrice, maxPrice, sort } = req.query;
+        const { search, category, minPrice, maxPrice, sort } = req.query;
 
         const query = {
             status: "approved",
@@ -301,16 +302,20 @@ export const getPublicEquipment = async (req, res) => {
                 $options: "i",
             };
         }
+
         if (category) {
             query.category = category;
         }
-        if (miniPrice !== undefined || maxPrice !== undefined) {
-            query.price = {}
-            if (miniPrice !== undefined) {
-                query.price.$gte = Number(miniPrice);
+
+        if (minPrice !== undefined || maxPrice !== undefined) {
+            query.price = {};
+
+            if (minPrice !== undefined) {
+                query.price.$gte = Number(minPrice);
             }
+
             if (maxPrice !== undefined) {
-                query.price.$lte = Number(maxPrice)
+                query.price.$lte = Number(maxPrice);
             }
         }
 
@@ -338,6 +343,7 @@ export const getPublicEquipment = async (req, res) => {
         });
     }
 };
+
 // Get equipment details (Public)
 export const getEquipmentDetails = async (req, res) => {
     try {
