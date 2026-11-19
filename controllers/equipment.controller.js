@@ -289,7 +289,7 @@ export const adminDeleteEquipment = async (req, res) => {
 // Get all approved equipment (Public)
 export const getPublicEquipment = async (req, res) => {
     try {
-        const { search, category } = req.query;
+        const { search, category, miniPrice, maxPrice } = req.query;
 
         const query = {
             status: "approved",
@@ -303,6 +303,15 @@ export const getPublicEquipment = async (req, res) => {
         }
         if (category) {
             query.category = category;
+        }
+        if(miniPrice !== undefined || maxPrice !== undefined){
+            query.price = {}
+            if(miniPrice !== undefined){
+                query.price.$gte = Number(miniPrice);
+            }
+            if(maxPrice !== undefined){
+                query.price.$lte = Number(maxPrice)
+            }
         }
 
         const result = await equipments.find(query)
