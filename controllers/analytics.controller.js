@@ -106,3 +106,174 @@ export const getAdminAnalytics = async (req, res) => {
         });
     }
 };
+
+
+// Get Owner Analytics
+export const getOwnerAnalytics = async (req, res) => {
+    try {
+        const ownerId = req.user.id;
+
+        // Total Listed Equipment
+        const totalEquipment = await equipments.countDocuments({
+            ownerId,
+        });
+
+        // Completed Rentals
+        const completedResult = await rentals.aggregate([
+            {
+                $lookup: {
+                    from: "equipment",
+                    localField: "equipmentId",
+                    foreignField: "_id",
+                    as: "equipment",
+                },
+            },
+            {
+                $unwind: "$equipment",
+            },
+            {
+                $match: {
+                    "equipment.ownerId": ownerId,
+                    status: "completed",
+                },
+            },
+            {
+                $count: "total",
+            },
+        ]).toArray();
+
+        const completedRentals = completedResult[0]?.total || 0;
+
+        // Total Earnings from Successful Payments
+        const earningsResult = await payments.aggregate([
+            {
+                $match: {
+                    status: "paid",
+                },
+            },
+            {
+                $lookup: {
+                    from: "rentals",
+                    localField: "rentalId",
+                    foreignField: "_id",
+                    as: "rental",
+                },
+            },
+            {
+                $unwind: "$rental",
+            },
+            {
+                $lookup: {
+                    from: "equipment",
+                    localField: "rental.equipmentId",
+                    foreignField: "_id",
+                    as: "equipment",
+                },
+            },
+            {
+                $unwind: "$equipment",
+            },
+            {
+                $match: {
+                    "equipment.ownerId": ownerId,
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalEarnings: {
+                        $sum: "$amount",
+                    },
+                },
+            },
+        ]).toArray();
+
+        const totalEarnings = earningsResult[0]?.totalEarnings || 0;
+
+        // Monthly Earnings (Last 6 Months)
+        const currentDate = new Date();
+
+        const sixMonthsAgo = new Date(
+            Date.UTC(
+                currentDate.getFullYear(),
+                currentDate.getMonth() - 5,
+                1
+            )
+        );
+
+        const monthlyEarnings = await payments.aggregate([
+            {
+                $match: {
+                    status: "paid",
+                    paidAt: {
+                        $gte: sixMonthsAgo,
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: "rentals",
+                    localField: "rentalId",
+                    foreignField: "_id",
+                    as: "rental",
+                },
+            },
+            {
+                $unwind: "$rental",
+            },
+            {
+                $lookup: {
+                    from: "equipment",
+                    localField: "rental.equipmentId",
+                    foreignField: "_id",
+                    as: "equipment",
+                },
+            },
+            {
+                $unwind: "$equipment",
+            },
+            {
+                $match: {
+                    "equipment.ownerId": ownerId,
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: {
+                            format: "%Y-%m",
+                            date: "$paidAt",
+                            timezone: "Asia/Dhaka",
+                        },
+                    },
+                    totalEarnings: {
+                        $sum: "$amount",
+                    },
+                },
+            },
+            {
+                $sort: {
+                    _id: 1,
+                },
+            },
+        ]).toArray();
+
+        return res.status(200).json({
+            message: "Owner analytics fetched successfully!",
+            analytics: {
+                totalEquipment,
+                completedRentals,
+                totalEarnings,
+                monthlyEarnings,
+            },
+        });
+
+    } catch (error) {
+        console.error("Owner analytics error:", error);
+
+        return res.status(500).json({
+            message: "Failed to fetch owner analytics!",
+        });
+    }
+};
+
