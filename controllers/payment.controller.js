@@ -1,8 +1,10 @@
+
 import { ObjectId } from "mongodb";
 import { database } from "../config/db.js";
 import stripe from "../config/stripe.js";
 
 const rentals = database.collection("rentals");
+const payments = database.collection("payments");
 
 // Create Stripe Checkout Session
 export const createCheckoutSession = async (req, res) => {
@@ -38,8 +40,6 @@ export const createCheckoutSession = async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             mode: "payment",
 
-            // payment_method_types: ["card"],
-
             line_items: [
                 {
                     price_data: {
@@ -65,7 +65,12 @@ export const createCheckoutSession = async (req, res) => {
         });
 
         await rentals.updateOne(
-            { _id: rental._id },
+            {
+                _id: rental._id,
+                customerId: req.user.id,
+                paymentStatus: "unpaid",
+                status: "pending",
+            },
             {
                 $set: {
                     stripeSessionId: session.id,
@@ -112,12 +117,29 @@ export const handleStripeWebhook = async (req, res) => {
             const checkoutSession = event.data.object;
 
             if (checkoutSession.payment_status === "paid") {
-                const rentalId = checkoutSession.metadata.rentalId;
+                const rentalId = checkoutSession.metadata?.rentalId;
+                const customerId = checkoutSession.metadata?.customerId;
 
-                if (ObjectId.isValid(rentalId)) {
-                    await rentals.updateOne(
+                if (!ObjectId.isValid(rentalId) || !customerId) {
+                    return res.status(400).json({
+                        message: "Invalid payment metadata!",
+                    });
+                }
+
+                const rentalObjectId = new ObjectId(rentalId);
+                const paidAt = new Date(event.created * 1000);
+
+                // Check duplicate payment
+                const existingPayment = await payments.findOne({
+                    stripeSessionId: checkoutSession.id,
+                });
+
+                if (!existingPayment) {
+                    // Update rental payment status
+                    const result = await rentals.updateOne(
                         {
-                            _id: new ObjectId(rentalId),
+                            _id: rentalObjectId,
+                            customerId,
                             stripeSessionId: checkoutSession.id,
                             paymentStatus: "unpaid",
                             status: "pending",
@@ -127,11 +149,36 @@ export const handleStripeWebhook = async (req, res) => {
                                 paymentStatus: "paid",
                                 status: "confirmed",
                                 paymentIntentId: checkoutSession.payment_intent,
-                                paidAt: new Date(event.created * 1000),
+                                paidAt,
                                 updatedAt: new Date(),
                             },
                         }
                     );
+
+                    // Debug logs
+                    console.log("Rental update result:", result);
+                    console.log("Stripe Session ID:", checkoutSession.id);
+
+                    if (result.modifiedCount === 1) {
+                        // Save payment transaction
+                        await payments.insertOne({
+                            rentalId: rentalObjectId,
+                            customerId,
+                            amount: checkoutSession.amount_total / 100,
+                            currency: checkoutSession.currency,
+                            stripeSessionId: checkoutSession.id,
+                            paymentIntentId: checkoutSession.payment_intent,
+                            status: "paid",
+                            paidAt,
+                            createdAt: new Date(),
+                        });
+
+                        console.log("Payment saved successfully!");
+                    } else {
+                        console.log("Rental was not updated. Payment record not inserted.");
+                    }
+                } else {
+                    console.log("Duplicate payment event ignored:", checkoutSession.id);
                 }
             }
         }
@@ -159,7 +206,6 @@ export const verifyCheckoutSession = async (req, res) => {
             });
         }
 
-        // Retrieve session directly from Stripe
         const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         // Verify session ownership
@@ -180,10 +226,11 @@ export const verifyCheckoutSession = async (req, res) => {
             });
         }
 
-        // Verify rental ownership
+        // Verify rental ownership and session
         const rental = await rentals.findOne({
             _id: new ObjectId(rentalId),
             customerId: req.user.id,
+            stripeSessionId: session.id,
         });
 
         if (!rental) {
