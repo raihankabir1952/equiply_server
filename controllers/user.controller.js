@@ -15,21 +15,37 @@ export const getMe = (req, res) => {
 };
 
 // Update current user profile
+
 export const updateMe = async (req, res) => {
     try {
-        const { name, image } = req.body;
+        const { name, image, phoneNumber, address } = req.body;
 
-        if (!name && !image) {
+        const updateData = {};
+
+        if (name !== undefined) {
+            updateData.name = name.trim();
+        }
+
+        if (image !== undefined) {
+            updateData.image = image;
+        }
+
+        if (phoneNumber !== undefined) {
+            updateData.phoneNumber = phoneNumber.trim();
+        }
+
+        if (address !== undefined) {
+            updateData.address = address.trim();
+        }
+
+        if (Object.keys(updateData).length === 0) {
             return res.status(400).json({
-                message: "Please provide name or image!",
+                message: "Please provide profile information to update!",
             });
         }
 
         const updatedUser = await auth.api.updateUser({
-            body: {
-                name,
-                image,
-            },
+            body: updateData,
             headers: fromNodeHeaders(req.headers),
         });
 
@@ -45,6 +61,7 @@ export const updateMe = async (req, res) => {
         });
     }
 };
+
 
 // Get all users
 export const getAllUsers = async (req, res) => {
