@@ -288,25 +288,53 @@ export const adminDeleteEquipment = async (req, res) => {
 };
 // Get all approved equipment (Public)
 
+
 export const getPublicEquipment = async (req, res) => {
     try {
-        const { search, category, minPrice, maxPrice, sort } = req.query;
+        const {
+            search,
+            category,
+            availability,
+            minPrice,
+            maxPrice,
+            sort,
+        } = req.query;
 
         const query = {
             status: "approved",
         };
 
+        // Search by Equipment Name or Category
         if (search) {
-            query.name = {
-                $regex: search,
-                $options: "i",
-            };
+            query.$or = [
+                {
+                    name: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+                {
+                    category: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+            ];
         }
 
+        // Category Filter
         if (category) {
             query.category = category;
         }
 
+        // Availability Filter
+        if (availability === "available") {
+            query.isAvailable = true;
+        } else if (availability === "unavailable") {
+            query.isAvailable = false;
+        }
+
+        // Price Filter
         if (minPrice !== undefined || maxPrice !== undefined) {
             query.price = {};
 
@@ -319,6 +347,7 @@ export const getPublicEquipment = async (req, res) => {
             }
         }
 
+        // Sorting
         let sortOption = { createdAt: -1 };
 
         if (sort === "price_asc") {
