@@ -269,6 +269,39 @@ export const getOwnerRentals = async (req, res) => {
                 },
             },
             {
+                $lookup: {
+                    from: "user",
+                    let: {
+                        customerId: "$customerId",
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: [
+                                        { $toString: "$_id" },
+                                        "$$customerId",
+                                    ],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                name: 1,
+                                email: 1,
+                            },
+                        },
+                    ],
+                    as: "customer",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$customer",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
                 $sort: {
                     createdAt: -1,
                 },
