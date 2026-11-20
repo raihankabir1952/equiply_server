@@ -13,6 +13,7 @@ import rentalRoutes from "./routes/rental.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import { handleStripeWebhook } from "./controllers/payment.controller.js";
 import verifyJWT from "./middleware/verifyJWT.js"
+import analyticsRoutes from "./routes/analytics.routes.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -46,6 +47,7 @@ app.use("/equipment", equipmentRoutes);
 app.use("/favorites", favoriteRoutes);
 app.use('/rentals', rentalRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/analytics", analyticsRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
