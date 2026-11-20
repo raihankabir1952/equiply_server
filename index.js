@@ -12,6 +12,7 @@ import favoriteRoutes from "./routes/favorite.routes.js";
 import rentalRoutes from "./routes/rental.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import { handleStripeWebhook } from "./controllers/payment.controller.js";
+import verifyJWT from "./middleware/verifyJWT.js"
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -49,6 +50,13 @@ app.use("/payments", paymentRoutes);
 // Test Route
 app.get("/", (req, res) => {
   res.send("Equiply Server is running!");
+});
+// Test JWT 
+app.get("/jwt-test", verifyJWT, (req, res) => {
+  res.status(200).json({
+    message: "JWT authentication successful!",
+    user: req.user,
+  });
 });
 
 await connectToMongoDB();
