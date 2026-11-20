@@ -414,6 +414,68 @@ export const getAllRentals = async (req, res) => {
                 },
             },
             {
+                $lookup: {
+                    from: "user",
+                    let: { customerId: "$customerId" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: [
+                                        { $toString: "$_id" },
+                                        "$$customerId",
+                                    ],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                name: 1,
+                                email: 1,
+                            },
+                        },
+                    ],
+                    as: "customer",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$customer",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: "user",
+                    let: { ownerId: "$equipment.ownerId" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: [
+                                        { $toString: "$_id" },
+                                        "$$ownerId",
+                                    ],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                name: 1,
+                                email: 1,
+                            },
+                        },
+                    ],
+                    as: "owner",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$owner",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
                 $sort: {
                     createdAt: -1,
                 },
@@ -432,3 +494,4 @@ export const getAllRentals = async (req, res) => {
         });
     }
 };
+
