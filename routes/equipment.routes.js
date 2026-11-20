@@ -1,20 +1,40 @@
+
 import express from "express";
-import verifyToken from "../middleware/verifyToken.js";
+import verifyJWT from "../middleware/verifyJWT.js";
 import verifyOwner from "../middleware/verifyOwner.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
-import { createEquipment, getMyEquipment, updateEquipment, deleteEquipment, getAllEquipment, updateEquipmentStatus, adminDeleteEquipment, getPublicEquipment, getEquipmentDetails, adminUpdateEquipment } from "../controllers/equipment.controller.js";
+
+import {
+    createEquipment,
+    getMyEquipment,
+    updateEquipment,
+    deleteEquipment,
+    getAllEquipment,
+    updateEquipmentStatus,
+    adminDeleteEquipment,
+    getPublicEquipment,
+    getEquipmentDetails,
+    adminUpdateEquipment,
+} from "../controllers/equipment.controller.js";
 
 const router = express.Router();
 
-router.post("/", verifyToken, verifyOwner, createEquipment);
-router.get("/my-equipment",verifyToken ,verifyOwner, getMyEquipment);
-router.patch("/:id", verifyToken, verifyOwner, updateEquipment);
-router.delete("/:id", verifyToken, verifyOwner, deleteEquipment);
-router.get("/", verifyToken, verifyAdmin, getAllEquipment);
-router.patch("/:id/status", verifyToken, verifyAdmin, updateEquipmentStatus);
-router.delete("/:id/admin", verifyToken, verifyAdmin, adminDeleteEquipment);
+// Owner routes
+router.post("/", verifyJWT, verifyOwner, createEquipment);
+router.get("/my-equipment", verifyJWT, verifyOwner, getMyEquipment);
+router.patch("/:id", verifyJWT, verifyOwner, updateEquipment);
+router.delete("/:id", verifyJWT, verifyOwner, deleteEquipment);
+
+// Admin routes
+router.get("/", verifyJWT, verifyAdmin, getAllEquipment);
+router.patch("/:id/status", verifyJWT, verifyAdmin, updateEquipmentStatus);
+router.delete("/:id/admin", verifyJWT, verifyAdmin, adminDeleteEquipment);
+router.patch("/:id/admin", verifyJWT, verifyAdmin, adminUpdateEquipment);
+
+// Public route
 router.get("/public", getPublicEquipment);
-router.get("/:id",verifyToken ,getEquipmentDetails);
-router.patch("/:id/admin", verifyToken, verifyAdmin, adminUpdateEquipment);
+
+// Authenticated users
+router.get("/:id", verifyJWT, getEquipmentDetails);
 
 export default router;
