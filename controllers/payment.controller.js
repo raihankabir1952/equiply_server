@@ -60,9 +60,8 @@ export const createCheckoutSession = async (req, res) => {
                 customerId: req.user.id,
             },
 
-            success_url: `${process.env.CLIENT_URL}/dashboard/customer/rentals?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-
-            cancel_url: `${process.env.CLIENT_URL}/dashboard/customer/rentals?payment=cancelled`,
+            success_url: `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.CLIENT_URL}/payment/cancel`,
         });
 
         await rentals.updateOne(
@@ -145,6 +144,64 @@ export const handleStripeWebhook = async (req, res) => {
 
         return res.status(500).json({
             message: "Webhook processing failed!",
+        });
+    }
+};
+
+// Verify Stripe Checkout Session
+export const verifyCheckoutSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+
+        if (!sessionId) {
+            return res.status(400).json({
+                message: "Session ID is required!",
+            });
+        }
+
+        // Retrieve session directly from Stripe
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        // Verify session ownership
+        if (
+            session.metadata?.customerId !== req.user.id ||
+            session.mode !== "payment"
+        ) {
+            return res.status(403).json({
+                message: "Invalid payment session!",
+            });
+        }
+
+        const rentalId = session.metadata.rentalId;
+
+        if (!ObjectId.isValid(rentalId)) {
+            return res.status(400).json({
+                message: "Invalid rental ID!",
+            });
+        }
+
+        // Verify rental ownership
+        const rental = await rentals.findOne({
+            _id: new ObjectId(rentalId),
+            customerId: req.user.id,
+        });
+
+        if (!rental) {
+            return res.status(404).json({
+                message: "Rental not found!",
+            });
+        }
+
+        return res.status(200).json({
+            message: "Payment status verified!",
+            paymentStatus: session.payment_status,
+            rentalId,
+        });
+    } catch (error) {
+        console.error("Payment verification error:", error);
+
+        return res.status(500).json({
+            message: "Failed to verify payment!",
         });
     }
 };
