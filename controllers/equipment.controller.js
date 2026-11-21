@@ -3,6 +3,7 @@ import { database } from "../config/db.js";
 import { ObjectId } from "mongodb";
 
 const equipments = database.collection("equipment");
+const rentals = database.collection("rentals");
 
 export const createEquipment = async (req, res) => {
     try {
@@ -73,8 +74,6 @@ export const createEquipment = async (req, res) => {
 };
 
 export const getMyEquipment = async (req, res) => {
-    console.log("Logged-in Owner ID:", req.user.id);
-    console.log("Owner ID type:", typeof req.user.id);
     try {
         const result = await equipments.find({
             ownerId: req.user.id,
@@ -82,9 +81,32 @@ export const getMyEquipment = async (req, res) => {
             createdAt: -1,
         }).toArray();
 
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+        const equipmentWithAvailability = await Promise.all(
+            result.map(async (item) => {
+                const availableToday = await calculateAvailableQuantity(
+                    item._id,
+                    item.availableQuantity,
+                    today,
+                    tomorrow
+                );
+
+                return {
+                    ...item,
+                    availableToday,
+                    bookedToday: item.availableQuantity - availableToday,
+                };
+            })
+        );
+
         return res.status(200).json({
             message: "My equipment fetched successfully!",
-            equipment: result,
+            equipment: equipmentWithAvailability,
         });
     } catch (error) {
         console.error("Get my equipment error:", error);
@@ -287,8 +309,6 @@ export const adminDeleteEquipment = async (req, res) => {
     }
 };
 // Get all approved equipment (Public)
-
-
 export const getPublicEquipment = async (req, res) => {
     try {
         const {
@@ -300,41 +320,17 @@ export const getPublicEquipment = async (req, res) => {
             sort,
         } = req.query;
 
-        const query = {
-            status: "approved",
-        };
+        const query = { status: "approved" };
 
-        // Search by Equipment Name or Category
         if (search) {
             query.$or = [
-                {
-                    name: {
-                        $regex: search,
-                        $options: "i",
-                    },
-                },
-                {
-                    category: {
-                        $regex: search,
-                        $options: "i",
-                    },
-                },
+                { name: { $regex: search, $options: "i" } },
+                { category: { $regex: search, $options: "i" } },
             ];
         }
 
-        // Category Filter
-        if (category) {
-            query.category = category;
-        }
+        if (category) query.category = category;
 
-        // Availability Filter
-        if (availability === "available") {
-            query.isAvailable = true;
-        } else if (availability === "unavailable") {
-            query.isAvailable = false;
-        }
-
-        // Price Filter
         if (minPrice !== undefined || maxPrice !== undefined) {
             query.price = {};
 
@@ -347,22 +343,52 @@ export const getPublicEquipment = async (req, res) => {
             }
         }
 
-        // Sorting
         let sortOption = { createdAt: -1 };
 
-        if (sort === "price_asc") {
-            sortOption = { price: 1 };
-        } else if (sort === "price_desc") {
-            sortOption = { price: -1 };
-        }
+        if (sort === "price_asc") sortOption = { price: 1 };
+        else if (sort === "price_desc") sortOption = { price: -1 };
 
-        const result = await equipments.find(query)
+        const result = await equipments
+            .find(query)
             .sort(sortOption)
             .toArray();
 
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+        let equipmentWithAvailability = await Promise.all(
+            result.map(async (item) => {
+                const availableToday = await calculateAvailableQuantity(
+                    item._id,
+                    item.availableQuantity,
+                    today,
+                    tomorrow
+                );
+
+                return {
+                    ...item,
+                    availableToday,
+                    bookedToday: item.availableQuantity - availableToday,
+                };
+            })
+        );
+
+        if (availability === "available") {
+            equipmentWithAvailability = equipmentWithAvailability.filter(
+                (item) => item.availableToday > 0 && item.isAvailable !== false
+            );
+        } else if (availability === "unavailable") {
+            equipmentWithAvailability = equipmentWithAvailability.filter(
+                (item) => item.availableToday === 0 || item.isAvailable === false
+            );
+        }
+
         return res.status(200).json({
             message: "Equipment fetched successfully!",
-            equipments: result,
+            equipments: equipmentWithAvailability,
         });
     } catch (error) {
         console.error("Get public equipment error:", error);
@@ -480,6 +506,88 @@ export const adminUpdateEquipment = async (req, res) => {
 
         return res.status(500).json({
             message: "Failed to update equipment!",
+        });
+    }
+};
+//calculateAvailableQuantity
+const calculateAvailableQuantity = async (
+    equipmentId,
+    totalQuantity,
+    startDate,
+    endDate
+) => {
+    const overlappingRentals = await rentals.find({
+        equipmentId: new ObjectId(equipmentId),
+        status: { $in: ["pending", "confirmed", "active"] },
+        startDate: { $lt: endDate },
+        endDate: { $gt: startDate },
+    }).toArray();
+
+    const bookedQuantity = overlappingRentals.reduce(
+        (total, rental) => total + rental.quantity,
+        0
+    );
+
+    return Math.max(0, totalQuantity - bookedQuantity);
+};
+//getEquipmentAvailability
+export const getEquipmentAvailability = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { startDate, endDate } = req.query;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: "Invalid equipment ID!",
+            });
+        }
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({
+                message: "Start date and end date are required!",
+            });
+        }
+
+        const rentalStartDate = new Date(startDate);
+        const rentalEndDate = new Date(endDate);
+
+        if (
+            Number.isNaN(rentalStartDate.getTime()) ||
+            Number.isNaN(rentalEndDate.getTime()) ||
+            rentalEndDate <= rentalStartDate
+        ) {
+            return res.status(400).json({
+                message: "Invalid rental date range!",
+            });
+        }
+
+        const equipment = await equipments.findOne({
+            _id: new ObjectId(id),
+            status: "approved",
+        });
+
+        if (!equipment) {
+            return res.status(404).json({
+                message: "Equipment not found!",
+            });
+        }
+
+        const availableQuantity = await calculateAvailableQuantity(
+            id,
+            equipment.availableQuantity,
+            rentalStartDate,
+            rentalEndDate
+        );
+
+        return res.status(200).json({
+            message: "Equipment availability fetched successfully!",
+            availableQuantity,
+        });
+    } catch (error) {
+        console.error("Get equipment availability error:", error);
+
+        return res.status(500).json({
+            message: "Failed to fetch equipment availability!",
         });
     }
 };

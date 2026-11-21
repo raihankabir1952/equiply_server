@@ -15,6 +15,7 @@ import {
     getPublicEquipment,
     getEquipmentDetails,
     adminUpdateEquipment,
+    getEquipmentAvailability,
 } from "../controllers/equipment.controller.js";
 
 const router = express.Router();
@@ -30,6 +31,7 @@ router.get("/", verifyToken, verifyAdmin, getAllEquipment);
 router.patch("/:id/status", verifyToken, verifyAdmin, updateEquipmentStatus);
 router.delete("/:id/admin", verifyToken, verifyAdmin, adminDeleteEquipment);
 router.patch("/:id/admin", verifyToken, verifyAdmin, adminUpdateEquipment);
+router.get("/:id/availability", verifyToken, getEquipmentAvailability);
 
 // Public route
 router.get("/public", getPublicEquipment);
