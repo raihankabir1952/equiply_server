@@ -49,6 +49,12 @@ app.use("/favorites", favoriteRoutes);
 app.use('/rentals', rentalRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/analytics", analyticsRoutes);
+
+app.get("/cron-test", (req, res) => {
+  res.status(200).json({
+    message: "Cron route is working!",
+  });
+});
 app.get("/cron/complete-rentals", completeExpiredRentals);
 
 // Test Route
