@@ -14,6 +14,7 @@ import paymentRoutes from "./routes/payment.routes.js";
 import { handleStripeWebhook } from "./controllers/payment.controller.js";
 import verifyToken from "./middleware/verifyToken.js"
 import analyticsRoutes from "./routes/analytics.routes.js";
+import { completeExpiredRentals } from "./controllers/cron.controller.js";
 
 const app = express();
 //const port = process.env.PORT || 5000;  COFD
@@ -48,6 +49,7 @@ app.use("/favorites", favoriteRoutes);
 app.use('/rentals', rentalRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/analytics", analyticsRoutes);
+app.get("/cron/complete-rentals", completeExpiredRentals);
 
 // Test Route
 app.get("/", (req, res) => {
