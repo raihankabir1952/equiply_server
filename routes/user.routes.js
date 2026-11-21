@@ -1,5 +1,5 @@
 import express from "express";
-import verifyJWT from "../middleware/verifyJWT.js";
+import verifyToken from "../middleware/verifyToken.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
 import {
     getMe,
@@ -10,10 +10,10 @@ import {
 
 const router = express.Router();
 
-router.get("/me", verifyJWT, getMe);
-router.patch("/me", verifyJWT, updateMe);
+router.get("/me", verifyToken, getMe);
+router.patch("/me", verifyToken, updateMe);
 
-router.get("/", verifyJWT, verifyAdmin, getAllUsers);
-router.patch("/:id/role", verifyJWT, verifyAdmin, updateUserRole);
+router.get("/", verifyToken, verifyAdmin, getAllUsers);
+router.patch("/:id/role", verifyToken, verifyAdmin, updateUserRole);
 
 export default router;

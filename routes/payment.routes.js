@@ -1,22 +1,22 @@
 
 import express from "express";
-import verifyJWT from "../middleware/verifyJWT.js";
-import verifyCustomer from "../middleware/verifyCustomer.js";
+import verifyToken from "../middleware/verifyToken.js";
+import verifyRenter from "../middleware/verifyRenter.js";
 import { createCheckoutSession, verifyCheckoutSession } from "../controllers/payment.controller.js";
 
 const router = express.Router();
 
 router.post(
     "/create-checkout-session",
-    verifyJWT,
-    verifyCustomer,
+    verifyToken,
+    verifyRenter,
     createCheckoutSession
 );
 
 router.get(
     "/verify-session/:sessionId",
-    verifyJWT,
-    verifyCustomer,
+    verifyToken,
+    verifyRenter,
     verifyCheckoutSession
 );
 

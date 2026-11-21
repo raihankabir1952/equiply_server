@@ -12,7 +12,7 @@ import favoriteRoutes from "./routes/favorite.routes.js";
 import rentalRoutes from "./routes/rental.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import { handleStripeWebhook } from "./controllers/payment.controller.js";
-import verifyJWT from "./middleware/verifyJWT.js"
+import verifyToken from "./middleware/verifyToken.js"
 import analyticsRoutes from "./routes/analytics.routes.js";
 
 const app = express();
@@ -54,7 +54,7 @@ app.get("/", (req, res) => {
   res.send("Equiply Server is running!");
 });
 // Test JWT 
-app.get("/jwt-test", verifyJWT, (req, res) => {
+app.get("/jwt-test", verifyToken, (req, res) => {
   res.status(200).json({
     message: "JWT authentication successful!",
     user: req.user,

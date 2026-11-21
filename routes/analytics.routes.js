@@ -1,6 +1,6 @@
 
 import express from "express";
-import verifyJWT from "../middleware/verifyJWT.js";
+import verifyToken from "../middleware/verifyToken.js";
 import verifyAdmin from "../middleware/verifyAdmin.js";
 import verifyOwner from "../middleware/verifyOwner.js";
 
@@ -12,9 +12,9 @@ import {
 const router = express.Router();
 
 // Admin Analytics
-router.get("/admin", verifyJWT, verifyAdmin, getAdminAnalytics);
+router.get("/admin", verifyToken, verifyAdmin, getAdminAnalytics);
 
 // Owner Analytics
-router.get("/owner", verifyJWT, verifyOwner, getOwnerAnalytics);
+router.get("/owner", verifyToken, verifyOwner, getOwnerAnalytics);
 
 export default router;

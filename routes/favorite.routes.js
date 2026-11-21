@@ -1,7 +1,7 @@
 
 import express from "express";
-import verifyJWT from "../middleware/verifyJWT.js";
-import verifyCustomer from "../middleware/verifyCustomer.js";
+import verifyToken from "../middleware/verifyToken.js";
+import verifyRenter from "../middleware/verifyRenter.js";
 
 import {
     addFavorite,
@@ -11,8 +11,8 @@ import {
 
 const router = express.Router();
 
-router.post("/", verifyJWT, verifyCustomer, addFavorite);
-router.get("/", verifyJWT, verifyCustomer, getMyFavorites);
-router.delete("/:equipmentId", verifyJWT, verifyCustomer, removeFavorite);
+router.post("/", verifyToken, verifyRenter, addFavorite);
+router.get("/", verifyToken, verifyRenter, getMyFavorites);
+router.delete("/:equipmentId", verifyToken, verifyRenter, removeFavorite);
 
 export default router;
