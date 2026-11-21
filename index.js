@@ -16,7 +16,7 @@ import verifyToken from "./middleware/verifyToken.js"
 import analyticsRoutes from "./routes/analytics.routes.js";
 
 const app = express();
-const port = process.env.PORT || 5000;
+//const port = process.env.PORT || 5000;  COFD
 
 // CORS
 app.use(
@@ -62,7 +62,12 @@ app.get("/jwt-test", verifyToken, (req, res) => {
 });
 
 await connectToMongoDB();
-// Server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+
+// Server 
+//comment out for deployment
+// app.listen(port, () => {
+//   console.log(`Server is running on port ${port}`);
+// });
+
+//extra line for deployment
+export default app;
