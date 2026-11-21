@@ -1,8 +1,6 @@
 
 import { database } from "../config/db.js";
 
-const rentals = database.collection("rentals");
-
 export const completeExpiredRentals = async (req, res) => {
     try {
         const cronSecret = process.env.CRON_SECRET;
@@ -21,6 +19,7 @@ export const completeExpiredRentals = async (req, res) => {
             });
         }
 
+        const rentals = database.collection("rentals");
         const now = new Date();
 
         const result = await rentals.updateMany(
